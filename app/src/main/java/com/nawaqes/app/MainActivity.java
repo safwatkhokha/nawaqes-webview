@@ -10,10 +10,17 @@ import android.webkit.WebChromeClient;
 import android.view.WindowManager;
 import android.webkit.GeolocationPermissions;
 import android.webkit.ValueCallback;
+import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
+import android.net.http.SslError;
+import android.webkit.SslErrorHandler;
+import android.annotation.SuppressLint;
+import android.os.Build;
 
 public class MainActivity extends Activity {
     private WebView webView;
     
+    @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -34,7 +41,12 @@ public class MainActivity extends Activity {
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        settings.setUserAgentString(settings.getUserAgentString() + " NawaqesApp/4.0.0");
+        settings.setUserAgentString(settings.getUserAgentString() + " NawaqesApp/4.0.2");
+        
+        // Enable hardware acceleration for video
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
+        }
         
         webView.setWebViewClient(new WebViewClient() {
             @Override
@@ -42,13 +54,23 @@ public class MainActivity extends Activity {
                 view.loadUrl(url);
                 return true;
             }
+            
+            @Override
+            public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
+                // Allow SSL for HF Spaces (self-signed certs in some cases)
+                handler.proceed();
+            }
         });
         
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
-                runOnUiThread(() -> request.grant(request.getResources()));
+                // GRANT ALL permissions (camera, mic, etc.) without asking
+                runOnUiThread(() -> {
+                    request.grant(request.getResources());
+                });
             }
+            
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 callback.invoke(origin, true, false);
