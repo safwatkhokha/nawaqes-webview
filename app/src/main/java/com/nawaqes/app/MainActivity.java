@@ -9,22 +9,28 @@ import android.webkit.PermissionRequest;
 import android.webkit.WebChromeClient;
 import android.view.WindowManager;
 import android.webkit.GeolocationPermissions;
-import android.webkit.ValueCallback;
-import android.webkit.WebResourceRequest;
-import android.webkit.WebResourceResponse;
-import android.net.http.SslError;
 import android.webkit.SslErrorHandler;
+import android.net.http.SslError;
 import android.annotation.SuppressLint;
 import android.os.Build;
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private WebView webView;
+    private PermissionRequest pendingPermissionRequest;
+    private static final int CAMERA_PERMISSION_CODE = 100;
+    private static final int MIC_PERMISSION_CODE = 101;
     
     @SuppressLint("SetJavaScriptEnabled")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 0);
+        
+        // Request Android-level camera + mic permissions FIRST
+        requestCameraAndMicPermissions();
         
         webView = new WebView(this);
         setContentView(webView);
@@ -41,9 +47,8 @@ public class MainActivity extends Activity {
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        settings.setUserAgentString(settings.getUserAgentString() + " NawaqesApp/4.0.2");
+        settings.setUserAgentString(settings.getUserAgentString() + " NawaqesApp/4.0.3");
         
-        // Enable hardware acceleration for video
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
         }
@@ -54,10 +59,8 @@ public class MainActivity extends Activity {
                 view.loadUrl(url);
                 return true;
             }
-            
             @Override
             public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
-                // Allow SSL for HF Spaces (self-signed certs in some cases)
                 handler.proceed();
             }
         });
@@ -65,12 +68,11 @@ public class MainActivity extends Activity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
-                // GRANT ALL permissions (camera, mic, etc.) without asking
+                // Grant ALL permissions immediately
                 runOnUiThread(() -> {
                     request.grant(request.getResources());
                 });
             }
-            
             @Override
             public void onGeolocationPermissionsShowPrompt(String origin, GeolocationPermissions.Callback callback) {
                 callback.invoke(origin, true, false);
@@ -81,6 +83,27 @@ public class MainActivity extends Activity {
             webView.loadUrl("https://safwatkhokha-nawaqes.hf.space/");
         } else {
             webView.restoreState(savedInstanceState);
+        }
+    }
+    
+    private void requestCameraAndMicPermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_CODE);
+            }
+            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
+            }
+        }
+    }
+    
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            Toast.makeText(this, "تم منح الإذن ✓", Toast.LENGTH_SHORT).show();
+        } else {
+            Toast.makeText(this, "الإذن مرفوض — لن تعمل الكاميرا", Toast.LENGTH_LONG).show();
         }
     }
     
