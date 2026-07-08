@@ -25,7 +25,14 @@ jobs:
         with:
           gradle-version: '8.1'
 
-      - name: Build APK
+      - name: Generate Keystore
+        run: |
+          keytool -genkey -v -keystore keystore.jks \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -alias nawaqes -storepass nawaqes123 -keypass nawaqes123 \
+            -dname "CN=Nawaqes, OU=App, O=Nawaqes, L=Cairo, ST=Cairo, C=EG"
+
+      - name: Build Signed APK
         run: gradle assembleRelease --no-daemon -x lint
 
       - name: Find APK
@@ -35,7 +42,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nawaqes-webview-apk
-          path: |
-            app/build/outputs/apk/release/*.apk
-            app/build/outputs/apk/**/*.apk
+          path: app/build/outputs/apk/release/*.apk
           retention-days: 90
