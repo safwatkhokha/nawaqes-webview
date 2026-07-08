@@ -8,10 +8,11 @@ android {
 
     defaultConfig {
         applicationId "com.nawaqes.app"
-        minSdk 24
+        minSdk 21
         targetSdk 34
-        versionCode 100
-        versionName "1.0.0"
+        versionCode 101
+        versionName "1.0.1"
+        multiDexEnabled true
     }
 
     compileOptions {
@@ -25,6 +26,8 @@ android {
             storePassword "nawaqes123"
             keyAlias "nawaqes"
             keyPassword "nawaqes123"
+            v1SigningEnabled true
+            v2SigningEnabled true
         }
     }
 
@@ -34,9 +37,14 @@ android {
             signingConfig signingConfigs.release
         }
     }
+
+    buildFeatures {
+        buildConfig true
+    }
 }
 
 dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.webkit:webkit:1.8.0'
+    implementation 'androidx.multidex:multidex:2.0.1'
 }
