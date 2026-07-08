@@ -47,7 +47,7 @@ public class MainActivity extends Activity {
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        settings.setUserAgentString(settings.getUserAgentString() + " NawaqesApp/4.0.3");
+        settings.setUserAgentString(settings.getUserAgentString() + " NawaqesApp/1.0.0");
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
