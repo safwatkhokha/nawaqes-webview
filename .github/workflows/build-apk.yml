@@ -1,0 +1,36 @@
+name: Build WebView APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Make gradlew
+        run: |
+          gradle wrapper --gradle-version 8.1
+          chmod +x gradlew
+
+      - name: Build APK
+        run: ./gradlew assembleRelease --no-daemon -x lint
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: nawaqes-webview-apk
+          path: app/build/outputs/apk/release/app-release.apk
+          retention-days: 90
