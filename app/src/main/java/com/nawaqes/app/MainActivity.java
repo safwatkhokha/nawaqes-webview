@@ -19,9 +19,7 @@ import android.widget.Toast;
 
 public class MainActivity extends Activity {
     private WebView webView;
-    private PermissionRequest pendingPermissionRequest;
-    private static final int CAMERA_PERMISSION_CODE = 100;
-    private static final int MIC_PERMISSION_CODE = 101;
+    private static final int ALL_PERMISSIONS_CODE = 200;
     
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -29,8 +27,8 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         getWindow().setFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN, 0);
         
-        // Request Android-level camera + mic permissions FIRST
-        requestCameraAndMicPermissions();
+        // Request ALL permissions at once (camera + mic + storage)
+        requestAllPermissions();
         
         webView = new WebView(this);
         setContentView(webView);
@@ -47,7 +45,7 @@ public class MainActivity extends Activity {
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
         settings.setSupportMultipleWindows(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
-        settings.setUserAgentString(settings.getUserAgentString() + " NawaqesApp/1.0.0");
+        settings.setUserAgentString(settings.getUserAgentString() + " NawaqesApp/1.0.2");
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
             webView.setLayerType(android.view.View.LAYER_TYPE_HARDWARE, null);
@@ -68,7 +66,7 @@ public class MainActivity extends Activity {
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onPermissionRequest(final PermissionRequest request) {
-                // Grant ALL permissions immediately
+                // Grant ALL requested permissions IMMEDIATELY without dialog
                 runOnUiThread(() -> {
                     request.grant(request.getResources());
                 });
@@ -86,13 +84,27 @@ public class MainActivity extends Activity {
         }
     }
     
-    private void requestCameraAndMicPermissions() {
+    private void requestAllPermissions() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_CODE);
+            String[] permissions = {
+                Manifest.permission.CAMERA,
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.MODIFY_AUDIO_SETTINGS,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE
+            };
+            
+            // Check which permissions are not granted
+            java.util.List<String> needed = new java.util.ArrayList<>();
+            for (String perm : permissions) {
+                if (checkSelfPermission(perm) != PackageManager.PERMISSION_GRANTED) {
+                    needed.add(perm);
+                }
             }
-            if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, MIC_PERMISSION_CODE);
+            
+            if (!needed.isEmpty()) {
+                // Request ALL missing permissions at once
+                requestPermissions(needed.toArray(new String[0]), ALL_PERMISSIONS_CODE);
             }
         }
     }
@@ -100,10 +112,20 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            Toast.makeText(this, "تم منح الإذن ✓", Toast.LENGTH_SHORT).show();
+        boolean allGranted = true;
+        for (int result : grantResults) {
+            if (result != PackageManager.PERMISSION_GRANTED) {
+                allGranted = false;
+                break;
+            }
+        }
+        if (allGranted) {
+            Toast.makeText(this, "تم منح جميع الأذونات ✓", Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(this, "الإذن مرفوض — لن تعمل الكاميرا", Toast.LENGTH_LONG).show();
+            // Some permissions denied — request again
+            Toast.makeText(this, "يجب السماح بكل الأذونات ليعمل البث المباشر", Toast.LENGTH_LONG).show();
+            // Re-request after a short delay
+            webView.postDelayed(this::requestAllPermissions, 2000);
         }
     }
     
